@@ -1,6 +1,6 @@
 table! {
     itemAttachments(itemID) {
-        itemID -> Nullable<Integer>,
+        itemID -> Integer,
         parentItemID -> Nullable<Integer>,
         contentType -> Nullable<Text>,
         path -> Nullable<Text>,
@@ -9,7 +9,7 @@ table! {
 
 table! {
     items(itemID) {
-        itemID -> Nullable<Integer>,
+        itemID -> Integer,
         itemTypeID -> Integer,
         key -> Text,
     }
@@ -53,6 +53,8 @@ table! {
         valueID -> Nullable<Integer>,
     }
 }
+
+joinable!(itemAttachments -> items(parentItemID));
 
 allow_tables_to_appear_in_same_query! {
     items, itemAttachments

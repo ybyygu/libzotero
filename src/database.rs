@@ -54,44 +54,61 @@ impl ZoteroDb {
 // base:1 ends here
 
 // [[file:~/Workspace/Programming/zotero/zotero.note::*core][core:1]]
+use crate::models::*;
+
 impl ZoteroDb {
-    pub fn get_attachment_paths_from_key(&self, k: &str) -> Result<Vec<Option<String>>> {
-        use crate::schema::*;
-
+    pub fn get_attachment_paths_from_key(&self, k: &str) -> Result<Vec<(String, String)>> {
         let con = self.get();
-        let results: Vec<Option<String>> = itemAttachments::table
-            .filter(
-                itemAttachments::columns::contentType
-                    .eq("application/pdf")
-                    .or(itemAttachments::columns::contentType.eq("application/x-note")),
-            )
-            .inner_join(
-                items::table.on(itemAttachments::columns::parentItemID.eq(items::columns::itemID)),
-            )
-            .filter(items::columns::key.eq(k))
-            .select(itemAttachments::columns::path)
-            .limit(5)
-            .load(&*con)
-            .context("Error loading keys")?;
 
-        // remove item `None`
-        // let results: Vec<_> = results.into_iter().filter_map(|x| x).collect();
-        println!("Found {} attachments for item {}", results.len(), k);
+        let parent_item: Item = {
+            use crate::schema::items::dsl::*;
+            items
+                .filter(key.eq(k))
+                .first(&*con)
+                .context("find parent itemID")?
+        };
 
-        Ok(dbg!(results))
+        let attachment_items: Vec<(i32, Option<String>)> = {
+            use crate::schema::itemAttachments::dsl::*;
+            itemAttachments
+                .select((itemID, path))
+                .filter(parentItemID.eq(parent_item.id))
+                .filter(path.is_not_null())
+                .filter(contentType.eq("application/pdf"))
+                .load(&*con)
+                .context("find attachment itemID")?
+        };
+
+        let attachments = {
+            use crate::schema::items::dsl::*;
+            attachment_items
+                .into_iter()
+                .map(|(item_id, path)| {
+                    let parent_key: String = items
+                        .find(item_id)
+                        .select(key)
+                        .first(&*con)
+                        .expect("attachment item key");
+                    (parent_key, path.unwrap())
+                })
+                .collect()
+        };
+
+        Ok(dbg!(attachments))
     }
 
     pub fn get_attachment(&self, link: &str) -> Result<Option<String>> {
         // FIXME: auto detect from zotero config
         use std::path::PathBuf;
 
+        // FIXME: dirty hack
         let zotero_storage_root = "/home/ybyygu/Data/zotero/storage";
         let p = "zotero://select/items/1_";
         if link.starts_with(p) {
             let key = &link[p.len()..];
-            let paths = self.get_attachment_paths_from_key(key)?;
-            if paths.len() > 0 {
-                let path = &paths[0].as_ref().unwrap();
+            let attachments = self.get_attachment_paths_from_key(key)?;
+            if attachments.len() > 0 {
+                let (key, path) = &attachments[0];
                 let attach_path = if path.starts_with("storage:") {
                     &path[8..]
                 } else {
@@ -106,7 +123,9 @@ impl ZoteroDb {
         Ok(None)
     }
 }
+// core:1 ends here
 
+// [[file:~/Workspace/Programming/zotero/zotero.note::*test][test:1]]
 #[test]
 fn test_diesel() {
     // use crate::schema::itemAttachments::dsl::*;
@@ -120,4 +139,4 @@ fn test_diesel() {
     let x = zotero.get_attachment("zotero://select/items/1_RXBNJTNY");
     dbg!(x);
 }
-// core:1 ends here
+// test:1 ends here
