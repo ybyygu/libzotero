@@ -1,7 +1,7 @@
 # [[file:~/Workspace/Programming/zotero/zotero.note::*cargo][cargo:1]]
 [package]
-name = "zotero"
-version = "0.0.1"
+name = "libzotero"
+version = "0.0.2"
 edition = "2018"
 authors = ["Wenping Guo <ybyygu@gmail.com>"]
 

@@ -17,7 +17,7 @@ use gut::prelude::*;
 /// Return attachment path associated zotero item in `link`.
 ///
 /// link: zotero://select/items/1_U5MRLMBI
-pub fn get_zotero_attachment_from_link(link: &str) -> Result<Option<String>> {
+pub fn get_attachment_from_link(link: &str) -> Result<Option<String>> {
     use crate::database::*;
     use crate::zotxt::*;
 
@@ -33,7 +33,7 @@ pub fn get_zotero_attachment_from_link(link: &str) -> Result<Option<String>> {
 #[test]
 fn test_get_attachment() {
     let link = "zotero://select/items/1_U5MRLMBI";
-    let attachment = get_zotero_attachment_from_link(link).expect("zotero attach");
+    let attachment = get_attachment_from_link(link).expect("zotero attach");
     assert!(attachment.is_some());
     let path = std::path::PathBuf::from(attachment.unwrap());
     assert!(path.exists());
