@@ -97,15 +97,16 @@ impl ZoteroDb {
         Ok(dbg!(attachments))
     }
 
-    pub fn get_attachment(&self, link: &str) -> Result<Option<String>> {
+    pub fn get_attachment_from_link(&self, link: &str) -> Result<Option<String>> {
         // FIXME: auto detect from zotero config
         use std::path::PathBuf;
 
         // FIXME: dirty hack
         let zotero_storage_root = "/home/ybyygu/Data/zotero/storage";
-        let p = "zotero://select/items/1_";
-        if link.starts_with(p) {
-            let key = &link[p.len()..];
+        let p0 = "zotero://select/items/0_";
+        let p1 = "zotero://select/items/1_";
+        if link.starts_with(p1) || link.starts_with(p0) {
+            let key = &link[p1.len()..];
             let attachments = self.get_attachment_paths_from_key(key)?;
             if attachments.len() > 0 {
                 let (key, path) = &attachments[0];
@@ -128,15 +129,11 @@ impl ZoteroDb {
 // [[file:~/Workspace/Programming/zotero/zotero.note::*test][test:1]]
 #[test]
 fn test_diesel() {
-    // use crate::schema::itemAttachments::dsl::*;
-    // use crate::schema::items::dsl::*;
-    use crate::schema::*;
-
     let url = "/home/ybyygu/Data/zotero/zotero.sqlite.bak";
     let zotero = ZoteroDb::connect(url).unwrap();
 
     zotero.get_attachment_paths_from_key("NIUYMGLJ").unwrap();
-    let x = zotero.get_attachment("zotero://select/items/1_RXBNJTNY");
+    let x = zotero.get_attachment_from_link("zotero://select/items/1_RXBNJTNY");
     dbg!(x);
 }
 // test:1 ends here

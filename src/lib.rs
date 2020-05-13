@@ -14,11 +14,28 @@ mod zotxt;
 // [[file:~/Workspace/Programming/zotero/zotero.note::*pub][pub:1]]
 use gut::prelude::*;
 
-pub fn get_zotero_attachment(link: &str) -> Result<Option<String>> {
-    let zot_server = crate::zotxt::ZoteroServer::default();
+/// Return attachment path associated zotero item in `link`.
+///
+/// link: zotero://select/items/1_U5MRLMBI
+pub fn get_zotero_attachment_from_link(link: &str) -> Result<Option<String>> {
+    use crate::database::*;
+    use crate::zotxt::*;
 
-    let zot_db = crate::database::ZoteroDb::establish()?;
-    // zot_server.get_attachment(link).or(zot_db.get_attachment(link))
-    zot_server.get_attachment(link)
+    let url = "/home/ybyygu/Data/zotero/zotero.sqlite.bak";
+    let zot_server = ZoteroServer::default();
+    let zot_db = ZoteroDb::connect(url)?;
+
+    zot_server.get_attachment(link).or(zot_db.get_attachment_from_link(link))
 }
 // pub:1 ends here
+
+// [[file:~/Workspace/Programming/zotero/zotero.note::*test][test:1]]
+#[test]
+fn test_get_attachment() {
+    let link = "zotero://select/items/1_U5MRLMBI";
+    let attachment = get_zotero_attachment_from_link(link).expect("zotero attach");
+    assert!(attachment.is_some());
+    let path = std::path::PathBuf::from(attachment.unwrap());
+    assert!(path.exists());
+}
+// test:1 ends here
