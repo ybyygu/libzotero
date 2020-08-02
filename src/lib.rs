@@ -1,17 +1,17 @@
-// [[file:~/Workspace/Programming/zotero/zotero.note::*imports][imports:1]]
+// [[file:../zotero.note::*imports][imports:1]]
 #[macro_use]
 extern crate diesel;
 // imports:1 ends here
 
-// [[file:~/Workspace/Programming/zotero/zotero.note::*mods][mods:1]]
+// [[file:../zotero.note::*mods][mods:1]]
 pub mod models;
 pub mod schema;
 
 mod database;
-mod zotxt;
+mod server;
 // mods:1 ends here
 
-// [[file:~/Workspace/Programming/zotero/zotero.note::*pub][pub:1]]
+// [[file:../zotero.note::*pub][pub:1]]
 use gut::prelude::*;
 
 /// Return PDF attachment path from zotero protocol link
@@ -21,7 +21,7 @@ use gut::prelude::*;
 /// * link: zotero item selection link, e.g: zotero://select/items/1_NIUYMGLJ
 pub fn get_attachment_from_link(link: &str) -> Result<Option<String>> {
     use crate::database::*;
-    use crate::zotxt::*;
+    use crate::server::*;
 
     let url = "/home/ybyygu/Data/zotero/zotero.sqlite.bak";
     let zot_server = ZoteroServer::default();
@@ -31,7 +31,7 @@ pub fn get_attachment_from_link(link: &str) -> Result<Option<String>> {
 }
 // pub:1 ends here
 
-// [[file:~/Workspace/Programming/zotero/zotero.note::*test][test:1]]
+// [[file:../zotero.note::*test][test:1]]
 #[test]
 fn test_get_attachment() {
     let link = "zotero://select/items/1_U5MRLMBI";

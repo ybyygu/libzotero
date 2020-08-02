@@ -1,4 +1,4 @@
-// [[file:../zotero.note::*zotxt.rs][zotxt.rs:1]]
+// [[file:../zotero.note::*get attachment][get attachment:1]]
 use gut::prelude::*;
 use serde::*;
 
@@ -19,14 +19,14 @@ impl ZoteroServer {
     ///
     /// link: zotero://select/items/1_BHDGEJJP
     pub fn get_attachment(&self, link: &str) -> Result<Option<String>> {
-        let url = format!("{}/zotxt/itesm?key={}&format=paths", self.base_url, key);
         let p = "zotero://select/items/";
         if link.starts_with(p) {
             let key = &link[p.len()..];
+            let url = format!("{}/zotxt/itesm?key={}&format=paths", self.base_url, key);
             let x = reqwest::blocking::get(&url)?.text()?;
             let resp: Vec<ResponseItem> = serde_json::from_str(&x)?;
 
-            let path = if resp.len() > 0 && resp[0].attachments.len() > 0 {
+            let path = if resp.len() > 0 && resp[0].paths.len() > 0 {
                 let path = resp[0].paths[0].clone();
                 Some(path)
             } else {
@@ -44,4 +44,4 @@ struct ResponseItem {
     key: String,
     paths: Vec<String>,
 }
-// zotxt.rs:1 ends here
+// get attachment:1 ends here

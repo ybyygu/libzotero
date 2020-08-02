@@ -1,4 +1,4 @@
-// [[file:~/Workspace/Programming/zotero/zotero.note::*base][base:1]]
+// [[file:../zotero.note::*base][base:1]]
 use gut::prelude::*;
 
 use diesel::prelude::*;
@@ -53,7 +53,7 @@ impl ZoteroDb {
 }
 // base:1 ends here
 
-// [[file:~/Workspace/Programming/zotero/zotero.note::*core][core:1]]
+// [[file:../zotero.note::*core][core:1]]
 use crate::models::*;
 
 impl ZoteroDb {
@@ -74,7 +74,11 @@ impl ZoteroDb {
                 .select((itemID, path))
                 .filter(parentItemID.eq(parent_item.id))
                 .filter(path.is_not_null())
-                .filter(contentType.eq("application/pdf").or(contentType.eq("application/x-note")))
+                .filter(
+                    contentType
+                        .eq("application/pdf")
+                        .or(contentType.eq("application/x-note")),
+                )
                 .load(&*con)
                 .context("find attachment itemID")?
         };
@@ -126,7 +130,7 @@ impl ZoteroDb {
 }
 // core:1 ends here
 
-// [[file:~/Workspace/Programming/zotero/zotero.note::*test][test:1]]
+// [[file:../zotero.note::*test][test:1]]
 #[test]
 fn test_diesel() {
     let url = "/home/ybyygu/Data/zotero/zotero.sqlite.bak";
