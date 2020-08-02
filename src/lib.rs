@@ -14,9 +14,11 @@ mod zotxt;
 // [[file:~/Workspace/Programming/zotero/zotero.note::*pub][pub:1]]
 use gut::prelude::*;
 
-/// Return attachment path associated zotero item in `link`.
+/// Return PDF attachment path from zotero protocol link
 ///
-/// link: zotero://select/items/1_U5MRLMBI
+/// # Parameters
+/// ----------
+/// * link: zotero item selection link, e.g: zotero://select/items/1_NIUYMGLJ
 pub fn get_attachment_from_link(link: &str) -> Result<Option<String>> {
     use crate::database::*;
     use crate::zotxt::*;

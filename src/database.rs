@@ -74,7 +74,7 @@ impl ZoteroDb {
                 .select((itemID, path))
                 .filter(parentItemID.eq(parent_item.id))
                 .filter(path.is_not_null())
-                .filter(contentType.eq("application/pdf"))
+                .filter(contentType.eq("application/pdf").or(contentType.eq("application/x-note")))
                 .load(&*con)
                 .context("find attachment itemID")?
         };
