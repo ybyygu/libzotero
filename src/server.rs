@@ -25,8 +25,7 @@ impl ZoteroServer {
         if link.starts_with(p) {
             let key = &link[p.len()..];
             let url = format!("{}/zotxt/itesm?key={}&format=paths", self.base_url, key);
-            let x = reqwest::blocking::get(&url)?.text()?;
-            let resp: Vec<ResponseItem> = serde_json::from_str(&x)?;
+            let resp = zotxt_client_call(&url)?;
 
             let path = if resp.len() > 0 && resp[0].paths.len() > 0 {
                 let path = resp[0].paths[0].clone();
@@ -46,8 +45,7 @@ impl ZoteroServer {
             "{}/zotxt/items?selected=selected&format=paths",
             self.base_url
         );
-        let x = reqwest::blocking::get(&url)?.text()?;
-        let resp: Vec<ResponseItem> = serde_json::from_str(&x)?;
+        let resp = zotxt_client_call(&url)?;
 
         if resp.len() == 1 {
             let path = resp[0].paths[0].clone();
@@ -56,6 +54,26 @@ impl ZoteroServer {
             Ok(None)
         }
     }
+
+    /// Get zotero url of current selected item in zotero
+    pub fn get_uri_of_selected_item(&self) -> Result<Option<String>> {
+        let url = format!("{}/zotxt/items?selected=selected&format=key", self.base_url);
+        let resp = zotxt_client_call(&url)?;
+
+        if resp.len() == 1 {
+            let key = resp[0].key.clone();
+            let uri = format!("zotero://select/items/{}", key);
+            Ok(Some(uri))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+fn zotxt_client_call(url: &str) -> Result<Vec<ResponseItem>> {
+    let x = reqwest::blocking::get(url)?.text()?;
+    let items = serde_json::from_str(&x)?;
+    Ok(items)
 }
 
 #[derive(Debug, Deserialize)]
