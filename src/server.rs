@@ -114,7 +114,7 @@ impl Default for Attachment {
     fn default() -> Self {
         Self {
             title: "research note".into(),
-            url: "http://localhost:8000/life.note".into(),
+            url: "http://localhost:23120/template.org".into(),
             mime_type: "application/x-note".into(),
             snapshot: true,
             proxy: false,
@@ -173,6 +173,7 @@ impl ZoteroServer {
 }
 
 #[test]
+#[ignore]
 fn test_connector_json() {
     let connector = ZoteroServer::default();
     let x = connector.create_new_note("xx").unwrap();
