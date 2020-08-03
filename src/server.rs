@@ -24,7 +24,7 @@ impl ZoteroServer {
         let p = "zotero://select/items/";
         if link.starts_with(p) {
             let key = &link[p.len()..];
-            let url = format!("{}/zotxt/itesm?key={}&format=paths", self.base_url, key);
+            let url = format!("{}/zotxt/items?key={}&format=paths", self.base_url, key);
             let resp = zotxt_client_call(&url)?;
 
             let path = if resp.len() > 0 && resp[0].paths.len() > 0 {
@@ -57,7 +57,7 @@ impl ZoteroServer {
 
     /// Get zotero url of current selected item in zotero
     pub fn get_uri_of_selected_item(&self) -> Result<Option<String>> {
-        let url = format!("{}/zotxt/items?selected=selected&format=key", self.base_url);
+        let url = format!("{}/zotxt/items?selected=selected&format=paths", self.base_url);
         let resp = zotxt_client_call(&url)?;
 
         if resp.len() == 1 {
@@ -168,7 +168,7 @@ impl ZoteroServer {
         let resp = new.text().context("client requests to create item")?;
         debug!("server response: {}", resp);
 
-        self.get_attachment_of_selected_item()
+        self.get_uri_of_selected_item()
     }
 }
 

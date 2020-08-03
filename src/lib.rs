@@ -27,7 +27,18 @@ pub fn get_attachment_from_link(link: &str) -> Result<Option<String>> {
     let zot_server = ZoteroServer::default();
     let zot_db = ZoteroDb::connect(url)?;
 
-    zot_server.get_attachment(link).or(zot_db.get_attachment_from_link(link))
+    zot_server
+        .get_attachment(link)
+        .or(zot_db.get_attachment_from_link(link))
+}
+
+/// Create a new `report` item in zotero with a .note (org-mode) attachment, and
+/// returns zotero uri of the new item.
+pub fn create_new_note() -> Result<Option<String>> {
+    use crate::server::*;
+
+    let connector = ZoteroServer::default();
+    connector.create_new_note("xx")
 }
 // pub:1 ends here
 
