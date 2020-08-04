@@ -130,6 +130,29 @@ impl ZoteroDb {
 }
 // core:1 ends here
 
+// [[file:../zotero.note::*relation][relation:1]]
+impl ZoteroDb {
+    fn get_related_items(&self) -> Result<Vec<(String, String)>> {
+        let con = self.get();
+
+        let x: Vec<(String, String)> = {
+            use crate::schema::itemRelations::dsl::*;
+            use crate::schema::items::dsl::*;
+            itemRelations
+                .inner_join(items)
+                .select((key, object))
+                .filter(predicateID.eq(2))
+                .filter(itemTypeID.ne(14))
+                .limit(10)
+                .load(&*con)
+                .context("find item relations")?
+        };
+
+        Ok(x)
+    }
+}
+// relation:1 ends here
+
 // [[file:../zotero.note::*test][test:1]]
 #[test]
 fn test_diesel() {
@@ -138,6 +161,9 @@ fn test_diesel() {
 
     zotero.get_attachment_paths_from_key("NIUYMGLJ").unwrap();
     let x = zotero.get_attachment_from_link("zotero://select/items/1_RXBNJTNY");
+    dbg!(x);
+
+    let x = zotero.get_related_items();
     dbg!(x);
 }
 // test:1 ends here

@@ -1,4 +1,6 @@
 // [[file:../zotero.note::*imports][imports:1]]
+#![allow(non_snake_case)]
+
 #[macro_use]
 extern crate diesel;
 // imports:1 ends here

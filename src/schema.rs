@@ -54,8 +54,17 @@ table! {
     }
 }
 
+table! {
+    itemRelations(itemID, predicateID, object) {
+        itemID -> Integer,
+        predicateID -> Integer,
+        object -> Text,
+    }
+}
+
 joinable!(itemAttachments -> items(parentItemID));
+joinable!(itemRelations -> items(itemID));
 
 allow_tables_to_appear_in_same_query! {
-    items, itemAttachments
+    items, itemAttachments, itemRelations,
 }
