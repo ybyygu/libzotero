@@ -135,6 +135,8 @@ impl ZoteroDb {
     fn get_related_items(&self) -> Result<Vec<(String, String)>> {
         let con = self.get();
 
+        // key: "2X4DGF8X",
+        // object: "http://zotero.org/users/15074/items/9F6B5E9G",
         let x: Vec<(String, String)> = {
             use crate::schema::itemRelations::dsl::*;
             use crate::schema::items::dsl::*;
@@ -150,6 +152,23 @@ impl ZoteroDb {
 
         Ok(x)
     }
+}
+
+// key  object
+// | 2787B283 | http://zotero.org/users/15074/items/M2S2HTNN |
+fn parse_zotero_key_from_object_url(url: &str) -> Option<String> {
+    if url.starts_with("http://zotero.org") {
+        url.rsplit("items/").next().map(|x| x.to_string())
+    } else {
+        None
+    }
+}
+
+#[test]
+fn test_key_from_object_url() {
+    let url = "http://zotero.org/users/15074/items/M2S2HTNN";
+    let parsed_key = parse_zotero_key_from_object_url(url);
+    assert_eq!(parsed_key, Some("M2S2HTNN".to_string()))
 }
 // relation:1 ends here
 
