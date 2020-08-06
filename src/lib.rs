@@ -10,6 +10,7 @@ pub mod models;
 pub mod schema;
 
 mod database;
+mod profile;
 mod server;
 // mods:1 ends here
 
