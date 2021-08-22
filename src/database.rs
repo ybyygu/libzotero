@@ -172,6 +172,28 @@ fn test_key_from_object_url() {
 }
 // relation:1 ends here
 
+// [[file:../zotero.note::*tags][tags:2]]
+impl ZoteroDb {
+    pub fn get_items_by_tag(&self, tag: &str) -> Result<Vec<String>> {
+        let con = self.get();
+        let x: Vec<String> = {
+            use crate::schema::itemTags::dsl::*;
+            use crate::schema::items::dsl::*;
+            use crate::schema::tags::dsl::*;
+            itemTags
+                .inner_join(tags)
+                .inner_join(items)
+                .select((key))
+                .filter(name.eq(tag))
+                .load(&*con)
+                .context("find item relations")?
+        };
+
+        Ok(x)
+    }
+}
+// tags:2 ends here
+
 // [[file:../zotero.note::*test][test:1]]
 #[test]
 fn test_diesel() {
@@ -183,6 +205,9 @@ fn test_diesel() {
     dbg!(x);
 
     let x = zotero.get_related_items();
+    dbg!(x);
+    
+    let x = zotero.get_items_by_tag("todo");
     dbg!(x);
 }
 // test:1 ends here

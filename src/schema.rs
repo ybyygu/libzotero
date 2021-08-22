@@ -64,7 +64,9 @@ table! {
 
 joinable!(itemAttachments -> items(parentItemID));
 joinable!(itemRelations -> items(itemID));
+joinable!(itemTags -> items(itemID));
+joinable!(itemTags -> tags(tagID));
 
 allow_tables_to_appear_in_same_query! {
-    items, itemAttachments, itemRelations,
+    items, itemTags, tags, itemAttachments, itemRelations,
 }
