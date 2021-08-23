@@ -38,6 +38,13 @@ table! {
 }
 
 table! {
+    fields(fieldID) {
+        fieldID -> Nullable<Integer>,
+        fieldName -> Nullable<Text>,
+    }
+}
+
+table! {
     itemCreator(itemID, creatorID, creatorTypeID, orderIndex) {
         itemID -> Integer,
         creatorID -> Integer,
@@ -48,9 +55,16 @@ table! {
 
 table! {
     itemData(itemID, fieldID) {
-        itemID -> Nullable<Integer>,
+        itemID -> Integer,
         fieldID -> Nullable<Integer>,
         valueID -> Nullable<Integer>,
+    }
+}
+
+table! {
+    itemDataValues(valueID) {
+        valueID -> Nullable<Integer>,
+        value -> Nullable<Text>,
     }
 }
 
@@ -64,9 +78,12 @@ table! {
 
 joinable!(itemAttachments -> items(parentItemID));
 joinable!(itemRelations -> items(itemID));
+joinable!(itemData -> itemDataValues(valueID));
+joinable!(itemData -> fields(fieldID));
+joinable!(itemData -> items(itemID));
 joinable!(itemTags -> items(itemID));
 joinable!(itemTags -> tags(tagID));
 
 allow_tables_to_appear_in_same_query! {
-    items, itemTags, tags, itemAttachments, itemRelations,
+    items, itemTags, itemData, itemDataValues, fields, tags, itemAttachments, itemRelations,
 }

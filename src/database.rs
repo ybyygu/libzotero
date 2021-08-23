@@ -172,31 +172,143 @@ fn test_key_from_object_url() {
 }
 // relation:1 ends here
 
-// [[file:../zotero.note::*tags][tags:2]]
-impl ZoteroDb {
-    pub fn get_items_by_tag(&self, tag: &str) -> Result<Vec<String>> {
-        let con = self.get();
-        let x: Vec<String> = {
-            use crate::schema::itemTags::dsl::*;
-            use crate::schema::items::dsl::*;
-            use crate::schema::tags::dsl::*;
-            itemTags
-                .inner_join(tags)
-                .inner_join(items)
-                .select((key))
-                .filter(name.eq(tag))
-                .load(&*con)
-                .context("find item relations")?
-        };
+// [[file:../zotero.note::*tags][tags:1]]
+use sqlx::sqlite::SqlitePool;
+use std::collections::HashMap;
 
-        Ok(x)
+type Map = HashMap<String, String>;
+
+// For any key-value record
+#[derive(sqlx::FromRow, Debug)]
+struct KvRec {
+    key: String,
+    value: String,
+}
+
+#[derive(sqlx::FromRow, Debug, Default)]
+pub struct Rec {
+    key: String,
+    value: String,
+    date: String,
+    title: String,
+}
+
+impl std::fmt::Display for Rec {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use unicode_width::*;
+
+        let title = format!("{:^50}", self.title);
+        let title = get_aligned_string(&title[..50], 100);
+        write!(f, "{} => {} | {:^} | {}", self.key, self.date, &title, self.value,)
     }
 }
-// tags:2 ends here
+
+impl std::str::FromStr for Rec {
+    type Err = gut::prelude::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.contains("=>") {
+            match s.splitn(2, "=>").collect_vec().as_slice() {
+                [a, b] => {
+                    let x = Self {
+                        key: a.trim().into(),
+                        value: b.trim().into(),
+                        ..Default::default()
+                    };
+                    return Ok(x);
+                }
+                _ => bail!("invalid {}", s),
+            }
+        } else {
+            bail!("invalid record: {}", s);
+        }
+    }
+}
+
+impl Rec {
+    /// Return a link in zotero protocol
+    pub fn item_link(&self) -> String {
+        format!("zotero://select/items/1_{}", self.key)
+    }
+}
+
+#[tokio::main(flavor = "current_thread")]
+/// Create a new `report` item in zotero with a .note (org-mode) attachment, and
+/// returns zotero uri of the new item.
+pub async fn get_items_by_tag(tag: &str) -> Result<Vec<String>> {
+    let dbfile = "/home/ybyygu/Data/zotero/zotero.sqlite.bak";
+    let pool = SqlitePool::connect(dbfile).await?;
+
+    // get matched items
+    let recs = sqlx::query_as::<_, KvRec>(
+        r#"
+SELECT key, value FROM items
+       JOIN itemData USING (itemID)
+       JOIN itemDataValues USING (valueID)
+       JOIN fields USING (fieldID)
+       JOIN itemTags USING (itemID)
+       JOIN tags USING (tagID)
+       WHERE name = "todo" AND fieldName = "extra"
+      "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    // get other fields, such as title and date
+    let mut all = vec![];
+    for x in recs {
+        let d = get_item_data(&pool, &x.key).await?;
+        let rec = Rec {
+            key: x.key.into(),
+            value: x.value.into(),
+            title: d["title"].to_string(),
+            date: d.get("date").unwrap_or(&"0000".to_string())[..4].to_string(),
+            ..Default::default()
+        };
+        all.push(rec.to_string());
+    }
+    Ok(all)
+}
+
+/// search item fields with key
+async fn get_item_data(pool: &SqlitePool, key: &str) -> Result<Map> {
+    let sql = r#"
+SELECT fields.FieldName as key, itemDataValues.value as value
+       FROM itemData
+       LEFT JOIN items ON itemData.itemID = items.itemID
+       LEFT JOIN fields ON itemData.fieldID = fields.fieldID
+       LEFT JOIN itemDataValues ON itemData.valueID = itemDataValues.valueID
+       WHERE items.key = ? 
+         AND fields.fieldName IN ("extra", "date", "publicationTitle", "title")
+"#;
+
+    let recs = sqlx::query_as::<_, KvRec>(sql).bind(key).fetch_all(pool).await?;
+    let d = recs.into_iter().map(|x| (x.key, x.value)).collect();
+    Ok(d)
+}
+// tags:1 ends here
+
+// [[file:../zotero.note::*alignment str][alignment str:1]]
+fn get_aligned_string(s: &str, max_width: usize) -> String {
+    use unicode_width::*;
+
+    // replace special unicode chars for nice alignment
+    let s = s.replace("–", "-").replace("×", "x").replace("−", "-");
+
+    let width = s.width_cjk();
+    assert!(max_width > width, "invalid {}/{}", max_width, width);
+    // dbg!(s.len(), width, s.width());
+    if s.len() == width {
+        format!("{:width$}", s, width = max_width)
+    } else {
+        format!("{:width$}", s, width = max_width - s.len() + width)
+    }
+}
+// alignment str:1 ends here
 
 // [[file:../zotero.note::*test][test:1]]
-#[test]
-fn test_diesel() {
+#[tokio::test]
+async fn test_diesel() -> Result<()> {
     let url = "/home/ybyygu/Data/zotero/zotero.sqlite.bak";
     let zotero = ZoteroDb::connect(url).unwrap();
 
@@ -206,8 +318,21 @@ fn test_diesel() {
 
     let x = zotero.get_related_items();
     dbg!(x);
-    
-    let x = zotero.get_items_by_tag("todo");
-    dbg!(x);
+
+    let dbfile = "/home/ybyygu/Data/zotero/zotero.sqlite.bak";
+    let pool = SqlitePool::connect(dbfile).await?;
+
+    use unicode_width::*;
+
+    let s1 = "Global Optimization of Adsorbate–Surface Structu";
+    let s2 = "Minima hopping guided path search: An efficient me";
+    let s3 = "中 hopping guided path search: An efficient me";
+    let s4 = "Structure of the SnO2(110)−(4×1) Surface ";
+    println!("{} | xx", get_aligned_string(s1, 100));
+    println!("{} | xx", get_aligned_string(s2, 100));
+    println!("{} | xx", get_aligned_string(s3, 100));
+    println!("{} | xx", get_aligned_string(s4, 100));
+
+    Ok(())
 }
 // test:1 ends here

@@ -44,16 +44,7 @@ pub fn create_new_note() -> Result<Option<String>> {
     connector.create_new_note("xx")
 }
 
-/// Create a new `report` item in zotero with a .note (org-mode) attachment, and
-/// returns zotero uri of the new item.
-pub fn get_items_by_tag(tag: &str) -> Result<Vec<String>> {
-    use crate::database::*;
-    use crate::server::*;
-
-    let url = "/home/ybyygu/Data/zotero/zotero.sqlite.bak";
-    let zot_db = ZoteroDb::connect(url)?;
-    zot_db.get_items_by_tag(tag)
-}
+pub use crate::database::{get_items_by_tag, Rec as ItemRec};
 // pub:1 ends here
 
 // [[file:../zotero.note::*test][test:1]]
