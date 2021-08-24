@@ -10,6 +10,7 @@ pub mod models;
 pub mod schema;
 
 mod database;
+mod db;
 mod profile;
 mod server;
 // mods:1 ends here
@@ -44,7 +45,7 @@ pub fn create_new_note() -> Result<Option<String>> {
     connector.create_new_note("xx")
 }
 
-pub use crate::database::{get_items_by_tag, Rec as ItemRec};
+pub use crate::db::{get_items_by_tag, Item};
 // pub:1 ends here
 
 // [[file:../zotero.note::*test][test:1]]
