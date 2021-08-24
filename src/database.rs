@@ -173,6 +173,7 @@ fn test_key_from_object_url() {
 // relation:1 ends here
 
 // [[file:../zotero.note::*tags][tags:1]]
+use sqlx::prelude::*;
 use sqlx::sqlite::SqlitePool;
 use std::collections::HashMap;
 
@@ -195,8 +196,6 @@ pub struct Rec {
 
 impl std::fmt::Display for Rec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use unicode_width::*;
-
         let title = format!("{:^50}", self.title);
         let title = get_aligned_string(&title[..50], 100);
         write!(f, "{} => {} | {:^} | {}", self.key, self.date, &title, self.value,)
@@ -288,6 +287,81 @@ SELECT fields.FieldName as key, itemDataValues.value as value
 }
 // tags:1 ends here
 
+// [[file:../zotero.note::*attachment][attachment:1]]
+impl Rec {
+    #[tokio::main(flavor = "current_thread")]
+    /// Return full paths of zotero item attachments
+    pub async fn attachment_paths(&self) -> Vec<String> {
+        match get_attachment_paths_from_key(&self.key).await {
+            Ok(paths) => paths,
+            Err(err) => {
+                eprintln!("no attachment found for key: {}", self.key);
+                vec![]
+            }
+        }
+    }
+}
+
+/// Return .pdf/.note attachements associated with the item in `key`
+pub async fn get_attachment_paths_from_key(key: &str) -> Result<Vec<String>> {
+    let dbfile = "/home/ybyygu/Data/zotero/zotero.sqlite.bak";
+    let pool = SqlitePool::connect(dbfile).await?;
+
+    // get matched items
+    let recs = sqlx::query(
+        r#"
+SELECT itemAttachments.itemID as id, itemAttachments.path as path
+FROM items, itemAttachments
+WHERE itemAttachments.path is not null
+  AND itemAttachments.parentItemID = items.itemID
+  AND (itemAttachments.contentType = "application/pdf" OR itemAttachments.contentType = "application/x-note")
+  AND items.key = ?
+"#,
+    )
+    .bind(key)
+    .fetch_all(&pool)
+    .await?;
+
+    let mut all = vec![];
+    for rec in recs {
+        let p: String = rec.try_get("path")?;
+        let i: i64 = rec.try_get("id")?;
+        let k = get_item_key_from_item_id(i).await?;
+        all.push(full_attachment_path(&k, &p));
+    }
+    Ok(all)
+}
+
+// zotero's attachment path may have a "storage:" prefix
+fn full_attachment_path(key: &str, path: &str) -> String {
+    // FIXME: auto detect from zotero config
+    // FIXME: dirty hack
+    let zotero_storage_root = "/home/ybyygu/Data/zotero/storage";
+    let attach_path = if path.starts_with("storage:") { &path[8..] } else { path };
+    format!("{}/{}/{}", zotero_storage_root, key, attach_path)
+}
+
+/// Return items.key from itemID
+async fn get_item_key_from_item_id(id: i64) -> Result<String> {
+    let dbfile = "/home/ybyygu/Data/zotero/zotero.sqlite.bak";
+    let pool = SqlitePool::connect(dbfile).await?;
+
+    let rec = sqlx::query(
+        r#"
+SELECT key
+FROM items
+WHERE itemID = ?
+"#,
+    )
+    .bind(id)
+    .fetch_one(&pool)
+    .await?;
+
+    let x: String = rec.try_get("key")?;
+    Ok(x)
+}
+// attachment:1 ends here
+
 // [[file:../zotero.note::*alignment str][alignment str:1]]
 fn get_aligned_string(s: &str, max_width: usize) -> String {
     use unicode_width::*;
@@ -322,8 +396,6 @@ async fn test_diesel() -> Result<()> {
     let dbfile = "/home/ybyygu/Data/zotero/zotero.sqlite.bak";
     let pool = SqlitePool::connect(dbfile).await?;
 
-    use unicode_width::*;
-
     let s1 = "Global Optimization of Adsorbate–Surface Structu";
     let s2 = "Minima hopping guided path search: An efficient me";
     let s3 = "中 hopping guided path search: An efficient me";
@@ -332,6 +404,9 @@ async fn test_diesel() -> Result<()> {
     println!("{} | xx", get_aligned_string(s2, 100));
     println!("{} | xx", get_aligned_string(s3, 100));
     println!("{} | xx", get_aligned_string(s4, 100));
+
+    let x = get_attachment_paths_from_key("AMC4WS9I").await?;
+    dbg!(x);
 
     Ok(())
 }
