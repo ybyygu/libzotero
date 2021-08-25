@@ -1,5 +1,6 @@
 // [[file:../zotero.note::*imports][imports:1]]
 use gut::prelude::*;
+use std::path::{Path, PathBuf};
 
 use sqlx::prelude::*;
 use sqlx::sqlite::SqlitePool;
@@ -207,8 +208,7 @@ WHERE itemAttachments.path is not null
 
 /// Return .pdf/.note attachements associated with the item in `key`
 async fn get_attachment_paths_from_key(key: &str) -> Result<Vec<String>> {
-    let dbfile = "/home/ybyygu/Data/zotero/zotero.sqlite.bak";
-    let db = ZoteroDb::connect(dbfile).await?;
+    let db = ZoteroDb::connect(Cached_Db_File).await?;
 
     let mut all = vec![];
     for attachment in db.get_attachments(key).await? {
@@ -230,12 +230,15 @@ fn full_attachment_path(key: &str, path: &str) -> String {
 // attachment:1 ends here
 
 // [[file:../zotero.note::*api][api:1]]
+static Db_File: &str = "/home/ybyygu/Data/zotero/zotero.sqlite";
+static Cached_Db_File: &str = "/home/ybyygu/.cache/zotero.sqlite";
+
 #[tokio::main(flavor = "current_thread")]
 /// Create a new `report` item in zotero with a .note (org-mode) attachment, and
 /// returns zotero uri of the new item.
 pub async fn get_items_by_tag(tag: &str) -> Result<Vec<Item>> {
-    let dbfile = "/home/ybyygu/Data/zotero/zotero.sqlite.bak";
-    let db = ZoteroDb::connect(dbfile).await?;
+    crate::profile::update_zotero_db_cache(Db_File.as_ref(), Cached_Db_File.as_ref())?;
+    let db = ZoteroDb::connect(Cached_Db_File).await?;
 
     let items = db.get_items_by_tag(tag).await?;
     Ok(items)
@@ -255,3 +258,16 @@ impl Item {
     }
 }
 // api:1 ends here
+
+// [[file:../zotero.note::*test][test:1]]
+#[tokio::test]
+async fn test_db() -> Result<()> {
+    let url = "/home/ybyygu/.cache/zotero.sqlite";
+    let zotero = ZoteroDb::connect(url).await?;
+
+    let x = get_attachment_paths_from_key("I9BXB5GH").await?;
+    dbg!(x);
+
+    Ok(())
+}
+// test:1 ends here

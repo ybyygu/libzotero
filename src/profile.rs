@@ -53,3 +53,44 @@ fn test_zotero_profile() {
     assert!(guess_zotero_data_dir().is_some());
 }
 // core:1 ends here
+
+// [[file:../zotero.note::*db cache][db cache:1]]
+/// Update zotero db file to a cached location when it has been updated.
+pub fn update_zotero_db_cache(dbfile: &Path, cached: &Path) -> Result<()> {
+    let t1 = std::fs::metadata(dbfile)?.modified()?;
+    if !cached.exists() {
+        // create leading directory
+        let parent_dir = cached.parent().unwrap();
+        if !parent_dir.exists() {
+            info!("creating leading dir: {:?}", parent_dir);
+            std::fs::create_dir_all(parent_dir)?;
+        }
+        copy_to(dbfile, cached)?;
+    } else {
+        let t2 = std::fs::metadata(cached)?.modified()?;
+        if t2 < t1 {
+            info!("zotero db source has been updated.");
+            copy_to(dbfile, cached)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn copy_to(src: &Path, dest: &Path) -> Result<()> {
+    info!("copy {:?} to {:?}", src, dest);
+    let _ = std::fs::copy(src, dest)?;
+    Ok(())
+}
+// db cache:1 ends here
+
+// [[file:../zotero.note::*test][test:1]]
+#[test]
+#[ignore]
+fn test_db_cache() -> Result<()> {
+    let dbfile: &Path = "/home/ybyygu/Data/zotero/zotero.sqlite".as_ref();
+    let cached: &Path = "/home/ybyygu/.cache/zotero.sqlite".as_ref();
+    update_zotero_db_cache(dbfile, cached)?;
+    Ok(())
+}
+// test:1 ends here
