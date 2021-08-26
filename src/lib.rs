@@ -45,7 +45,7 @@ pub fn create_new_note() -> Result<Option<String>> {
     connector.create_new_note("xx")
 }
 
-pub use crate::db::{get_items_by_tag, Item};
+pub use crate::db::{get_item_key_from_link, get_items_by_tag, Item};
 // pub:1 ends here
 
 // [[file:../zotero.note::*test][test:1]]

@@ -114,6 +114,22 @@ impl Item {
 }
 // item:1 ends here
 
+// [[file:../zotero.note::*link][link:1]]
+impl ZoteroDb {
+    /// Extract item key from link in zotero protocol
+    fn get_item_key_from_link(link: &str) -> Result<String> {
+        let p0 = "zotero://select/items/0_";
+        let p1 = "zotero://select/items/1_";
+        if link.starts_with(p1) || link.starts_with(p0) {
+            let key = &link[p1.len()..];
+            Ok(key.into())
+        } else {
+            bail!("invalid link: {}", link);
+        }
+    }
+}
+// link:1 ends here
+
 // [[file:../zotero.note::*tags][tags:1]]
 type Map = std::collections::HashMap<String, String>;
 
@@ -232,6 +248,11 @@ fn full_attachment_path(key: &str, path: &str) -> String {
 // [[file:../zotero.note::*api][api:1]]
 static Db_File: &str = "/home/ybyygu/Data/zotero/zotero.sqlite";
 static Cached_Db_File: &str = "/home/ybyygu/.cache/zotero.sqlite";
+
+/// Extract item key from link in zotero protocol
+pub fn get_item_key_from_link(link: &str) -> Result<String> {
+    ZoteroDb::get_item_key_from_link(link)
+}
 
 #[tokio::main(flavor = "current_thread")]
 /// Create a new `report` item in zotero with a .note (org-mode) attachment, and
