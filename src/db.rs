@@ -87,19 +87,17 @@ impl std::fmt::Display for Item {
 impl std::str::FromStr for Item {
     type Err = gut::prelude::Error;
 
+    // only zotero item key matters
+    // HUMF2AEA
+    // HUMF2AEA =>
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.contains("=>") {
-            match s.splitn(2, "=>").collect_vec().as_slice() {
-                [a, b] => {
-                    let x = Self {
-                        key: a.trim().into(),
-                        value: b.trim().into(),
-                        ..Default::default()
-                    };
-                    return Ok(x);
-                }
-                _ => bail!("invalid {}", s),
-            }
+        if s.len() >= 8 {
+            let key = s[..8].to_string();
+            let x = Self {
+                key,
+                ..Default::default()
+            };
+            return Ok(x);
         } else {
             bail!("invalid record: {}", s);
         }
