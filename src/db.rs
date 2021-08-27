@@ -152,6 +152,7 @@ impl ZoteroDb {
     /// Create a new `report` item in zotero with a .note (org-mode) attachment, and
     /// returns zotero uri of the new item.
     async fn get_items_by_tag(&self, tag: &str) -> Result<Vec<Item>> {
+        // FIXME: the extra field could be emitted
         let items = sqlx::query_as::<_, KvRec>(
             r#"
 SELECT key, value FROM items
@@ -169,36 +170,36 @@ SELECT key, value FROM items
         // get other fields, such as title and date
         let mut all = vec![];
         for x in items {
-            let d = get_item_data(self.pool(), &x.key).await?;
-            let rec = Item {
-                key: x.key.into(),
-                extra: x.value.into(),
-                title: d["title"].to_string(),
-                date: d.get("date").unwrap_or(&"0000".to_string())[..4].to_string(),
-                ..Default::default()
-            };
-            all.push(rec);
+            let item = self.get_item(&x.key).await?;
+            all.push(item);
         }
-
         Ok(all)
     }
-}
 
-/// search item fields with key
-async fn get_item_data(pool: &SqlitePool, key: &str) -> Result<Map> {
-    let sql = r#"
+    /// Get zotero item in `key` will interesting fields filled.
+    async fn get_item(&self, key: &str) -> Result<Item> {
+        let sql = r#"
 SELECT fields.FieldName as key, itemDataValues.value as value
-       FROM itemData
-       LEFT JOIN items ON itemData.itemID = items.itemID
-       LEFT JOIN fields ON itemData.fieldID = fields.fieldID
-       LEFT JOIN itemDataValues ON itemData.valueID = itemDataValues.valueID
-       WHERE items.key = ? 
-         AND fields.fieldName IN ("extra", "date", "publicationTitle", "title")
+    FROM itemData
+    LEFT JOIN items ON itemData.itemID = items.itemID
+    LEFT JOIN fields ON itemData.fieldID = fields.fieldID
+    LEFT JOIN itemDataValues ON itemData.valueID = itemDataValues.valueID
+    WHERE items.key = ? 
+      AND fields.fieldName IN ("extra", "date", "publicationTitle", "title")
 "#;
 
-    let recs = sqlx::query_as::<_, KvRec>(sql).bind(key).fetch_all(pool).await?;
-    let d = recs.into_iter().map(|x| (x.key, x.value)).collect();
-    Ok(d)
+        let recs = sqlx::query_as::<_, KvRec>(sql).bind(key).fetch_all(self.pool()).await?;
+        let d: Map = recs.into_iter().map(|x| (x.key, x.value)).collect();
+        let item = Item {
+            key: key.into(),
+            extra: d["extra"].to_string(),
+            title: d["title"].to_string(),
+            date: d.get("date").unwrap_or(&"0000".to_string())[..4].to_string(),
+            ..Default::default()
+        };
+
+        Ok(item)
+    }
 }
 // tags:1 ends here
 
