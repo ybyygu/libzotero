@@ -105,6 +105,14 @@ impl std::str::FromStr for Item {
 }
 
 impl Item {
+    /// Construct a zotero item from item key.
+    pub fn new<S: Into<String>>(key: S) -> Self {
+        Self {
+            key: key.into(),
+            ..Default::default()
+        }
+    }
+
     /// Return a link in zotero protocol
     pub fn item_link(&self) -> String {
         format!("zotero://select/items/1_{}", self.key)
@@ -128,15 +136,17 @@ impl ZoteroDb {
 }
 // link:1 ends here
 
-// [[file:../zotero.note::*tags][tags:1]]
-type Map = std::collections::HashMap<String, String>;
-
+// [[file:../zotero.note::*rec][rec:1]]
 // For any key-value record
 #[derive(sqlx::FromRow, Debug)]
 struct KvRec {
     key: String,
     value: String,
 }
+// rec:1 ends here
+
+// [[file:../zotero.note::*tags][tags:1]]
+type Map = std::collections::HashMap<String, String>;
 
 impl ZoteroDb {
     /// Create a new `report` item in zotero with a .note (org-mode) attachment, and
@@ -191,6 +201,51 @@ SELECT fields.FieldName as key, itemDataValues.value as value
     Ok(d)
 }
 // tags:1 ends here
+
+// [[file:../zotero.note::*relation][relation:1]]
+impl ZoteroDb {
+    // key: "2X4DGF8X",
+    // value: "http://zotero.org/users/15074/items/9F6B5E9G",
+    async fn get_related_items(&self, key: &str) -> Result<Vec<Item>> {
+        let recs = sqlx::query_as::<_, KvRec>(
+            r#"
+SELECT items.key as key, itemRelations.object as value FROM items
+JOIN itemRelations USING (itemID)
+WHERE predicateID == 2 AND
+      itemTypeID != 14 AND
+      items.key = ?
+"#,
+        )
+        .bind(key)
+        .fetch_all(self.pool())
+        .await?;
+
+        let related_items = recs
+            .into_iter()
+            .filter_map(|rec| parse_zotero_key_from_object_url(&rec.value))
+            .map(|key| Item::new(key))
+            .collect_vec();
+        Ok(related_items)
+    }
+}
+
+// key  object
+// | 2787B283 | http://zotero.org/users/15074/items/M2S2HTNN |
+fn parse_zotero_key_from_object_url(url: &str) -> Option<String> {
+    if url.starts_with("http://zotero.org") {
+        url.rsplit("items/").next().map(|x| x.to_string())
+    } else {
+        None
+    }
+}
+
+#[test]
+fn test_key_from_object_url() {
+    let url = "http://zotero.org/users/15074/items/M2S2HTNN";
+    let parsed_key = parse_zotero_key_from_object_url(url);
+    assert_eq!(parsed_key, Some("M2S2HTNN".to_string()))
+}
+// relation:1 ends here
 
 // [[file:../zotero.note::*attachment][attachment:1]]
 #[derive(sqlx::FromRow, Debug)]
@@ -250,6 +305,15 @@ static Cached_Db_File: &str = "/home/ybyygu/.cache/zotero.sqlite";
 /// Extract item key from link in zotero protocol
 pub fn get_item_key_from_link(link: &str) -> Result<String> {
     ZoteroDb::get_item_key_from_link(link)
+}
+
+#[tokio::main(flavor = "current_thread")]
+/// Search related items for item with `key`.
+pub async fn get_related_items(key: &str) -> Result<Vec<Item>> {
+    crate::profile::update_zotero_db_cache(Db_File.as_ref(), Cached_Db_File.as_ref())?;
+    let db = ZoteroDb::connect(Cached_Db_File).await?;
+    let items = db.get_related_items(key).await?;
+    Ok(items)
 }
 
 #[tokio::main(flavor = "current_thread")]
