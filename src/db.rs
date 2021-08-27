@@ -72,7 +72,7 @@ fn get_aligned_string(s: &str, max_width: usize) -> String {
 #[derive(sqlx::FromRow, Debug, Default)]
 pub struct Item {
     key: String,
-    value: String,
+    extra: String,
     date: String,
     title: String,
 }
@@ -80,7 +80,7 @@ pub struct Item {
 impl std::fmt::Display for Item {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let title = get_aligned_string(&self.title, 100);
-        write!(f, "{} => {} | {:^} | {}", self.key, self.date, &title, self.value,)
+        write!(f, "{} => {} | {:^} | {}", self.key, self.date, &title, self.extra,)
     }
 }
 
@@ -172,7 +172,7 @@ SELECT key, value FROM items
             let d = get_item_data(self.pool(), &x.key).await?;
             let rec = Item {
                 key: x.key.into(),
-                value: x.value.into(),
+                extra: x.value.into(),
                 title: d["title"].to_string(),
                 date: d.get("date").unwrap_or(&"0000".to_string())[..4].to_string(),
                 ..Default::default()
@@ -349,6 +349,9 @@ async fn test_db() -> Result<()> {
     let zotero = ZoteroDb::connect(url).await?;
 
     let x = get_attachment_paths_from_key("I9BXB5GH").await?;
+    dbg!(x);
+
+    let x = zotero.get_related_items("FU5SDYIA").await?;
     dbg!(x);
 
     Ok(())
