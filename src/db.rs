@@ -192,8 +192,8 @@ SELECT fields.FieldName as key, itemDataValues.value as value
         let d: Map = recs.into_iter().map(|x| (x.key, x.value)).collect();
         let item = Item {
             key: key.into(),
-            extra: d["extra"].to_string(),
-            title: d["title"].to_string(),
+            extra: d.get("extra").unwrap_or(&String::new()).to_string(),
+            title: d.get("title").unwrap_or(&String::new()).to_string(),
             date: d.get("date").unwrap_or(&"0000".to_string())[..4].to_string(),
             ..Default::default()
         };
@@ -230,6 +230,13 @@ WHERE predicateID == 2 AND
         }
         Ok(related)
     }
+}
+
+/// Return related items with item in `key`
+async fn get_related_items_from_key(key: &str) -> Result<Vec<Item>> {
+    let db = ZoteroDb::connect(Cached_Db_File).await?;
+    let items = db.get_related_items(key).await?;
+    Ok(items)
 }
 
 // key  object
@@ -311,15 +318,6 @@ pub fn get_item_key_from_link(link: &str) -> Result<String> {
 }
 
 #[tokio::main(flavor = "current_thread")]
-/// Search related items for item with `key`.
-pub async fn get_related_items(key: &str) -> Result<Vec<Item>> {
-    crate::profile::update_zotero_db_cache(Db_File.as_ref(), Cached_Db_File.as_ref())?;
-    let db = ZoteroDb::connect(Cached_Db_File).await?;
-    let items = db.get_related_items(key).await?;
-    Ok(items)
-}
-
-#[tokio::main(flavor = "current_thread")]
 /// Create a new `report` item in zotero with a .note (org-mode) attachment, and
 /// returns zotero uri of the new item.
 pub async fn get_items_by_tag(tag: &str) -> Result<Vec<Item>> {
@@ -341,6 +339,13 @@ impl Item {
                 vec![]
             }
         }
+    }
+
+    #[tokio::main(flavor = "current_thread")]
+    /// Return a list of related items
+    pub async fn get_related_items(&self) -> Result<Vec<Item>> {
+        let related = get_related_items_from_key(&self.key).await?;
+        Ok(related)
     }
 }
 // api:1 ends here
