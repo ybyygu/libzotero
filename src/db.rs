@@ -221,12 +221,14 @@ WHERE predicateID == 2 AND
         .fetch_all(self.pool())
         .await?;
 
-        let related_items = recs
-            .into_iter()
-            .filter_map(|rec| parse_zotero_key_from_object_url(&rec.value))
-            .map(|key| Item::new(key))
-            .collect_vec();
-        Ok(related_items)
+        let mut related = vec![];
+        for rec in recs {
+            if let Some(key) = parse_zotero_key_from_object_url(&rec.value) {
+                let item = self.get_item(&key).await?;
+                related.push(item);
+            }
+        }
+        Ok(related)
     }
 }
 
