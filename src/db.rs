@@ -53,7 +53,12 @@ WHERE itemID = ?
 // [[file:../zotero.note::*alignment str][alignment str:1]]
 fn get_aligned_string(s: &str, max_width: usize) -> String {
     // replace special unicode chars for nice alignment
-    let s = s.replace("–", "-").replace("×", "x").replace("−", "-");
+    let s = s
+        .replace("–", "-")
+        .replace("×", "x")
+        .replace("−", "-")
+        .replace("”", "\"")
+        .replace("“", "\"");
     let title = format!("{:width$}", s, width = max_width);
     let s = title[..max_width].to_string();
 
