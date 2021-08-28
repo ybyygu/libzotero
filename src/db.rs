@@ -149,21 +149,23 @@ struct KvRec {
 type Map = std::collections::HashMap<String, String>;
 
 impl ZoteroDb {
-    /// Create a new `report` item in zotero with a .note (org-mode) attachment, and
-    /// returns zotero uri of the new item.
+    /// Search zotero items by `tag`
     async fn get_items_by_tag(&self, tag: &str) -> Result<Vec<Item>> {
         // FIXME: the extra field could be emitted
         let items = sqlx::query_as::<_, KvRec>(
             r#"
 SELECT key, value FROM items
-       JOIN itemData USING (itemID)
-       JOIN itemDataValues USING (valueID)
-       JOIN fields USING (fieldID)
-       JOIN itemTags USING (itemID)
-       JOIN tags USING (tagID)
-       WHERE name = "todo" AND fieldName = "extra"
-      "#,
+    JOIN itemData USING (itemID)
+    JOIN itemDataValues USING (valueID)
+    JOIN fields USING (fieldID)
+    JOIN itemTags USING (itemID)
+    JOIN tags USING (tagID)
+    WHERE name = ? AND fieldName = "extra"
+    -- exclude deleted items
+    AND items.itemID NOT IN (select itemID from deletedItems)
+"#,
         )
+        .bind(tag)
         .fetch_all(self.pool())
         .await?;
 
@@ -212,9 +214,12 @@ impl ZoteroDb {
             r#"
 SELECT items.key as key, itemRelations.object as value FROM items
 JOIN itemRelations USING (itemID)
-WHERE predicateID == 2 AND
-      itemTypeID != 14 AND
-      items.key = ?
+WHERE predicateID == 2
+      -- only matching parent item, not attachment
+      AND itemTypeID != 14
+      -- exclude deleted items
+      AND items.itemID NOT IN (select itemID from deletedItems)
+      AND items.key = ?
 "#,
         )
         .bind(key)
@@ -274,6 +279,8 @@ FROM items, itemAttachments
 WHERE itemAttachments.path is not null
   AND itemAttachments.parentItemID = items.itemID
   AND (itemAttachments.contentType = "application/pdf" OR itemAttachments.contentType = "application/x-note")
+  -- exclude deleted items
+  AND itemAttachments.itemID NOT IN (select itemID from deletedItems)
   AND items.key = ?
 "#,
         )
