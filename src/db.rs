@@ -80,7 +80,9 @@ pub struct Item {
 impl std::fmt::Display for Item {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let title = get_aligned_string(&self.title, 100);
-        write!(f, "{} => {} | {:^} | {}", self.key, self.date, &title, self.extra,)
+        // make sure extra in one line
+        let extra = self.extra.replace("\n", "; ");
+        write!(f, "{} => {} | {:^} | {}", self.key, self.date, &title, extra)
     }
 }
 
