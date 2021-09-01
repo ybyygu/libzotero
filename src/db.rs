@@ -58,7 +58,8 @@ fn get_aligned_string(s: &str, max_width: usize) -> String {
         .replace("×", "x")
         .replace("−", "-")
         .replace("”", "\"")
-        .replace("“", "\"");
+        .replace("“", "\"")
+        .replace("’", "'");
     let title = format!("{:width$}", s, width = max_width);
     let s = title[..max_width].to_string();
 
@@ -167,12 +168,12 @@ SELECT key, value FROM items
     JOIN fields USING (fieldID)
     JOIN itemTags USING (itemID)
     JOIN tags USING (tagID)
-    WHERE name = ? AND fieldName = "extra"
+    WHERE LOWER(name) like ? AND fieldName = "extra"
     -- exclude deleted items
     AND items.itemID NOT IN (select itemID from deletedItems)
 "#,
         )
-        .bind(tag)
+        .bind(format!("%{}%", tag.to_lowercase()))
         .fetch_all(self.pool())
         .await?;
 
@@ -212,6 +213,33 @@ SELECT fields.FieldName as key, itemDataValues.value as value
 }
 // tags:1 ends here
 
+// [[file:../zotero.note::*collection][collection:1]]
+impl ZoteroDb {
+    /// Search zotero items by `collection`
+    async fn get_items_by_collection(&self, collection: &str) -> Result<Vec<Item>> {
+        let items = sqlx::query_as::<_, KvRec>(
+            r#"
+SELECT items.key as key, collectionName as value from collections
+    JOIN collectionItems USING (collectionID)
+    JOIN items using (itemID)
+    WHERE LOWER(collections.collectionName) like ? 
+"#,
+        )
+        .bind(format!("%{}%", collection.to_lowercase()))
+        .fetch_all(self.pool())
+        .await?;
+
+        // get other fields, such as title and date
+        let mut all = vec![];
+        for x in items {
+            let item = self.get_item(&x.key).await?;
+            all.push(item);
+        }
+        Ok(all)
+    }
+}
+// collection:1 ends here
+
 // [[file:../zotero.note::*relation][relation:1]]
 impl ZoteroDb {
     // key: "2X4DGF8X",
@@ -246,7 +274,7 @@ WHERE predicateID == 2
 
 /// Return related items with item in `key`
 async fn get_related_items_from_key(key: &str) -> Result<Vec<Item>> {
-    let db = ZoteroDb::connect(Cached_Db_File).await?;
+    let db = ZoteroDb::connect(CACHED_DB_FILE).await?;
     let items = db.get_related_items(key).await?;
     Ok(items)
 }
@@ -301,7 +329,7 @@ WHERE itemAttachments.path is not null
 
 /// Return .pdf/.note attachements associated with the item in `key`
 async fn get_attachment_paths_from_key(key: &str) -> Result<Vec<String>> {
-    let db = ZoteroDb::connect(Cached_Db_File).await?;
+    let db = ZoteroDb::connect(CACHED_DB_FILE).await?;
 
     let mut all = vec![];
     for attachment in db.get_attachments(key).await? {
@@ -323,8 +351,8 @@ fn full_attachment_path(key: &str, path: &str) -> String {
 // attachment:1 ends here
 
 // [[file:../zotero.note::*api][api:1]]
-static Db_File: &str = "/home/ybyygu/Data/zotero/zotero.sqlite";
-static Cached_Db_File: &str = "/home/ybyygu/.cache/zotero.sqlite";
+static DB_FILE: &str = "/home/ybyygu/Data/zotero/zotero.sqlite";
+static CACHED_DB_FILE: &str = "/home/ybyygu/.cache/zotero.sqlite";
 
 /// Extract item key from link in zotero protocol
 pub fn get_item_key_from_link(link: &str) -> Result<String> {
@@ -335,10 +363,20 @@ pub fn get_item_key_from_link(link: &str) -> Result<String> {
 /// Create a new `report` item in zotero with a .note (org-mode) attachment, and
 /// returns zotero uri of the new item.
 pub async fn get_items_by_tag(tag: &str) -> Result<Vec<Item>> {
-    crate::profile::update_zotero_db_cache(Db_File.as_ref(), Cached_Db_File.as_ref())?;
-    let db = ZoteroDb::connect(Cached_Db_File).await?;
+    crate::profile::update_zotero_db_cache(DB_FILE.as_ref(), CACHED_DB_FILE.as_ref())?;
+    let db = ZoteroDb::connect(CACHED_DB_FILE).await?;
 
     let items = db.get_items_by_tag(tag).await?;
+    Ok(items)
+}
+
+#[tokio::main(flavor = "current_thread")]
+/// Search zotero items by collection name
+pub async fn get_items_by_collection(name: &str) -> Result<Vec<Item>> {
+    crate::profile::update_zotero_db_cache(DB_FILE.as_ref(), CACHED_DB_FILE.as_ref())?;
+    let db = ZoteroDb::connect(CACHED_DB_FILE).await?;
+
+    let items = db.get_items_by_collection(name).await?;
     Ok(items)
 }
 
