@@ -159,16 +159,12 @@ type Map = std::collections::HashMap<String, String>;
 impl ZoteroDb {
     /// Search zotero items by `tag`
     async fn get_items_by_tag(&self, tag: &str) -> Result<Vec<Item>> {
-        // FIXME: the extra field could be emitted
         let items = sqlx::query_as::<_, KvRec>(
             r#"
-SELECT key, value FROM items
-    JOIN itemData USING (itemID)
-    JOIN itemDataValues USING (valueID)
-    JOIN fields USING (fieldID)
+SELECT items.key as key, tags.name as value FROM items
     JOIN itemTags USING (itemID)
     JOIN tags USING (tagID)
-    WHERE LOWER(name) like ? AND fieldName = "extra"
+    WHERE LOWER(name) like ?
     -- exclude deleted items
     AND items.itemID NOT IN (select itemID from deletedItems)
 "#,
