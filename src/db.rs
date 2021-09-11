@@ -52,25 +52,42 @@ WHERE itemID = ?
 
 // [[file:../zotero.note::*alignment str][alignment str:1]]
 fn get_aligned_string(s: &str, max_width: usize) -> String {
-    // replace special unicode chars for nice alignment
-    let s = s
-        .replace("–", "-")
-        .replace("×", "x")
-        .replace("−", "-")
-        .replace("”", "\"")
-        .replace("“", "\"")
-        .replace("’", "'");
-    let title = format!("{:width$}", s, width = max_width);
-    let s = title[..max_width].to_string();
-
     use unicode_width::*;
-    let width = s.width_cjk();
-    // dbg!(s.len(), width, s.width());
-    if s.len() == width {
+
+    // if `s` is too long, truncate it to a short one by display width for nice alignment
+    let title = format!("{:width$}", s, width = max_width);
+    let s = if s.width() > max_width {
+        format!("{}...", &title[..max_width - 3])
+    } else {
+        title[..max_width].to_string()
+    };
+
+    let str_width = s.width();
+    let str_len = s.len();
+    if str_len == str_width {
         format!("{:width$}", s, width = max_width)
     } else {
-        format!("{:width$}", s, width = max_width - s.len() + width)
+        format!("{}{:width$}", s, " ", width = max_width - str_width)
     }
+}
+
+#[test]
+fn test_str_width() {
+    use unicode_width::*;
+    let s0 = "Brønsted acidic zeolites";
+    let s1 = "Mo̸ller-Plesset 好好";
+    let s2 = "101̅0) and (112̅0)";
+    let s3 = "1010) and (1120)";
+    let s4 = "Mo̸ller-Plesset 好好                    xx";
+    let s5 = "Sites Converge?†";
+    let s6 = "Selectivity—Modeled by QM/MM Calculations";
+    assert_eq!(get_aligned_string(s0, 40).width(), 40);
+    assert_eq!(get_aligned_string(s1, 40).width(), 40);
+    assert_eq!(get_aligned_string(s2, 40).width(), 40);
+    assert_eq!(get_aligned_string(s3, 40).width(), 40);
+    assert_eq!(get_aligned_string(s4, 40).width(), 40);
+    assert_eq!(get_aligned_string(s5, 40).width(), 40);
+    assert_eq!(get_aligned_string(s6, 40).width(), 40);
 }
 // alignment str:1 ends here
 
@@ -88,7 +105,7 @@ impl std::fmt::Display for Item {
         let title = get_aligned_string(&self.title, 100);
         // make sure extra in one line
         let extra = self.extra.replace("\n", "; ");
-        write!(f, "{} => {} | {:^} | {}", self.key, self.date, &title, extra)
+        write!(f, "{} => {} | {:} | {}", self.key, self.date, &title, extra)
     }
 }
 
@@ -126,6 +143,25 @@ impl Item {
         format!("zotero://select/items/1_{}", self.key)
     }
 }
+
+// 4VH9GANA => 2009 | Do Quantum Mechanical Energies Calculated for Small Models of Protein-Active Sites Converge?†        |
+// FIIAZG4V => 2010 | P450 Enzymes: Their Structure, Reactivity, and Selectivity—Modeled by QM/MM Calculations             |
+// JVGGKSCS => 2008 | A theoretical investigation into the thiophene-cracking mechanism over pure Brønsted acidic zeolite  |
+// #[tokio::test]
+// async fn test_item_key_format() {
+//     let url = "/home/ybyygu/.cache/zotero.sqlite";
+//     let zotero = ZoteroDb::connect(url).await.unwrap();
+//     let item = zotero.get_item("TU57B9TH").await.unwrap();
+//     println!("{}", item);
+//     let item = zotero.get_item("4VH9GANA").await.unwrap();
+//     println!("{}", item);
+//     let item = zotero.get_item("FIIAZG4V").await.unwrap();
+//     println!("{}", item);
+//     let item = zotero.get_item("JVGGKSCS").await.unwrap();
+//     println!("{}", item);
+//     let item = zotero.get_item("N9GGY79G").await.unwrap();
+//     println!("{}", item);
+// }
 // item:1 ends here
 
 // [[file:../zotero.note::*link][link:1]]
