@@ -1,9 +1,9 @@
-// [[file:../zotero.note::*imports][imports:1]]
+// [[file:../zotero.note::61a34b09][61a34b09]]
 #![allow(non_snake_case)]
 
-#[macro_use]
-extern crate diesel;
-// imports:1 ends here
+// #[macro_use]
+// extern crate diesel;
+// 61a34b09 ends here
 
 // [[file:../zotero.note::*mods][mods:1]]
 // pub mod models;

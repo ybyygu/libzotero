@@ -6,7 +6,7 @@ use sqlx::prelude::*;
 use sqlx::sqlite::SqlitePool;
 // imports:1 ends here
 
-// [[file:../zotero.note::*base][base:1]]
+// [[file:../zotero.note::b64609c9][b64609c9]]
 mod base {
     use super::*;
 
@@ -17,7 +17,12 @@ mod base {
 
     impl ZoteroDb {
         pub async fn connect(uri: &str) -> Result<Self> {
-            let pool = SqlitePool::connect(uri).await?;
+            use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode};
+            // read only access
+            let options = SqliteConnectOptions::from_str(uri)?
+                .immutable(true)
+                .read_only(true);
+            let pool = SqlitePool::connect_with(options).await?;
             let db = Self { pool };
             Ok(db)
         }
@@ -28,7 +33,7 @@ mod base {
     }
 }
 pub use base::ZoteroDb;
-// base:1 ends here
+// b64609c9 ends here
 
 // [[file:../zotero.note::*core][core:1]]
 impl ZoteroDb {
@@ -272,7 +277,7 @@ SELECT items.key as key, collectionName as value from collections
 }
 // collection:1 ends here
 
-// [[file:../zotero.note::*relation][relation:1]]
+// [[file:../zotero.note::8ae891d8][8ae891d8]]
 impl ZoteroDb {
     // key: "2X4DGF8X",
     // value: "http://zotero.org/users/15074/items/9F6B5E9G",
@@ -306,7 +311,7 @@ WHERE predicateID == 2
 
 /// Return related items with item in `key`
 async fn get_related_items_from_key(key: &str) -> Result<Vec<Item>> {
-    let db = ZoteroDb::connect(CACHED_DB_FILE).await?;
+    let db = ZoteroDb::connect(DB_FILE).await?;
     let items = db.get_related_items(key).await?;
     Ok(items)
 }
@@ -327,7 +332,7 @@ fn test_key_from_object_url() {
     let parsed_key = parse_zotero_key_from_object_url(url);
     assert_eq!(parsed_key, Some("M2S2HTNN".to_string()))
 }
-// relation:1 ends here
+// 8ae891d8 ends here
 
 // [[file:../zotero.note::c91d3b45][c91d3b45]]
 #[derive(sqlx::FromRow, Debug)]
@@ -361,7 +366,7 @@ WHERE itemAttachments.path is not null
 
 /// Return .pdf/.note attachements associated with the item in `key`
 async fn get_attachment_paths_from_key(key: &str) -> Result<Vec<String>> {
-    let db = ZoteroDb::connect(CACHED_DB_FILE).await?;
+    let db = ZoteroDb::connect(DB_FILE).await?;
 
     let mut all = vec![];
     for attachment in db.get_attachments(key).await? {
@@ -384,13 +389,11 @@ fn full_attachment_path(key: &str, path: &str) -> String {
 
 // [[file:../zotero.note::cdcbd2e6][cdcbd2e6]]
 static DB_FILE: &str = "/home/ybyygu/Documents/Data/zotero/zotero.sqlite";
-static CACHED_DB_FILE: &str = "/home/ybyygu/.cache/zotero.sqlite";
 
 #[tokio::main(flavor = "current_thread")]
 /// Quick search zotero items
 pub async fn get_items_dwim(keyword: &str) -> Result<Vec<Item>> {
-    crate::profile::update_zotero_db_cache(DB_FILE.as_ref(), CACHED_DB_FILE.as_ref())?;
-    let db = ZoteroDb::connect(CACHED_DB_FILE).await?;
+    let db = ZoteroDb::connect(DB_FILE).await?;
 
     // let items = db.get_items_dwim(keyword).await?;
     // Ok(items)
@@ -406,8 +409,7 @@ pub fn get_item_key_from_link(link: &str) -> Result<String> {
 /// Create a new `report` item in zotero with a .note (org-mode) attachment, and
 /// returns zotero uri of the new item.
 pub async fn get_items_by_tag(tag: &str) -> Result<Vec<Item>> {
-    crate::profile::update_zotero_db_cache(DB_FILE.as_ref(), CACHED_DB_FILE.as_ref())?;
-    let db = ZoteroDb::connect(CACHED_DB_FILE).await?;
+    let db = ZoteroDb::connect(DB_FILE).await?;
 
     let items = db.get_items_by_tag(tag).await?;
     Ok(items)
@@ -416,8 +418,7 @@ pub async fn get_items_by_tag(tag: &str) -> Result<Vec<Item>> {
 #[tokio::main(flavor = "current_thread")]
 /// Search zotero items by collection name
 pub async fn get_items_by_collection(name: &str) -> Result<Vec<Item>> {
-    crate::profile::update_zotero_db_cache(DB_FILE.as_ref(), dbg!(CACHED_DB_FILE).as_ref())?;
-    let db = ZoteroDb::connect(CACHED_DB_FILE).await?;
+    let db = ZoteroDb::connect(DB_FILE).await?;
 
     let items = db.get_items_by_collection(name).await?;
     Ok(items)
