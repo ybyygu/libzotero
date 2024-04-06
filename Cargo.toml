@@ -1,7 +1,7 @@
-# [[file:zotero.note::*cargo][cargo:1]]
+# [[file:zotero.note::8b5019c9][8b5019c9]]
 [package]
 name = "libzotero"
-version = "0.0.4"
+version = "0.0.6"
 edition = "2018"
 authors = ["Wenping Guo <ybyygu@gmail.com>"]
 
@@ -19,4 +19,4 @@ tokio = {version = "1.0", features = ["full"]}
 unicode-width = "0.1.7"
 
 [dev-dependencies]
-# cargo:1 ends here
+# 8b5019c9 ends here

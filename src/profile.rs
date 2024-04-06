@@ -54,7 +54,7 @@ fn test_zotero_profile() {
 }
 // core:1 ends here
 
-// [[file:../zotero.note::*db cache][db cache:1]]
+// [[file:../zotero.note::bc5986f8][bc5986f8]]
 /// Update zotero db file to a cached location when it has been updated.
 pub fn update_zotero_db_cache(dbfile: &Path, cached: &Path) -> Result<()> {
     let t1 = std::fs::metadata(dbfile)?.modified()?;
@@ -82,7 +82,7 @@ fn copy_to(src: &Path, dest: &Path) -> Result<()> {
     let _ = std::fs::copy(src, dest)?;
     Ok(())
 }
-// db cache:1 ends here
+// bc5986f8 ends here
 
 // [[file:../zotero.note::*test][test:1]]
 #[test]

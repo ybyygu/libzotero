@@ -226,7 +226,7 @@ SELECT fields.FieldName as key, itemDataValues.value as value
     LEFT JOIN items ON itemData.itemID = items.itemID
     LEFT JOIN fields ON itemData.fieldID = fields.fieldID
     LEFT JOIN itemDataValues ON itemData.valueID = itemDataValues.valueID
-    WHERE items.key = ? 
+    WHERE items.key = ?
       AND fields.fieldName IN ("extra", "date", "publicationTitle", "title")
 "#;
 
@@ -254,7 +254,7 @@ impl ZoteroDb {
 SELECT items.key as key, collectionName as value from collections
     JOIN collectionItems USING (collectionID)
     JOIN items using (itemID)
-    WHERE LOWER(collections.collectionName) like ? 
+    WHERE LOWER(collections.collectionName) like ?
 "#,
         )
         .bind(format!("%{}%", collection.to_lowercase()))
@@ -329,7 +329,7 @@ fn test_key_from_object_url() {
 }
 // relation:1 ends here
 
-// [[file:../zotero.note::*attachment][attachment:1]]
+// [[file:../zotero.note::c91d3b45][c91d3b45]]
 #[derive(sqlx::FromRow, Debug)]
 struct Attachment {
     id: i64,
@@ -376,15 +376,26 @@ async fn get_attachment_paths_from_key(key: &str) -> Result<Vec<String>> {
 fn full_attachment_path(key: &str, path: &str) -> String {
     // FIXME: auto detect from zotero config
     // FIXME: dirty hack
-    let zotero_storage_root = "/home/ybyygu/Data/zotero/storage";
+    let zotero_storage_root = "/home/ybyygu/Documents/Data/zotero/storage";
     let attach_path = if path.starts_with("storage:") { &path[8..] } else { path };
     format!("{}/{}/{}", zotero_storage_root, key, attach_path)
 }
-// attachment:1 ends here
+// c91d3b45 ends here
 
-// [[file:../zotero.note::*api][api:1]]
-static DB_FILE: &str = "/home/ybyygu/Data/zotero/zotero.sqlite";
+// [[file:../zotero.note::cdcbd2e6][cdcbd2e6]]
+static DB_FILE: &str = "/home/ybyygu/Documents/Data/zotero/zotero.sqlite";
 static CACHED_DB_FILE: &str = "/home/ybyygu/.cache/zotero.sqlite";
+
+#[tokio::main(flavor = "current_thread")]
+/// Quick search zotero items
+pub async fn get_items_dwim(keyword: &str) -> Result<Vec<Item>> {
+    crate::profile::update_zotero_db_cache(DB_FILE.as_ref(), CACHED_DB_FILE.as_ref())?;
+    let db = ZoteroDb::connect(CACHED_DB_FILE).await?;
+
+    // let items = db.get_items_dwim(keyword).await?;
+    // Ok(items)
+    todo!();
+}
 
 /// Extract item key from link in zotero protocol
 pub fn get_item_key_from_link(link: &str) -> Result<String> {
@@ -405,7 +416,7 @@ pub async fn get_items_by_tag(tag: &str) -> Result<Vec<Item>> {
 #[tokio::main(flavor = "current_thread")]
 /// Search zotero items by collection name
 pub async fn get_items_by_collection(name: &str) -> Result<Vec<Item>> {
-    crate::profile::update_zotero_db_cache(DB_FILE.as_ref(), CACHED_DB_FILE.as_ref())?;
+    crate::profile::update_zotero_db_cache(DB_FILE.as_ref(), dbg!(CACHED_DB_FILE).as_ref())?;
     let db = ZoteroDb::connect(CACHED_DB_FILE).await?;
 
     let items = db.get_items_by_collection(name).await?;
@@ -432,7 +443,7 @@ impl Item {
         Ok(related)
     }
 }
-// api:1 ends here
+// cdcbd2e6 ends here
 
 // [[file:../zotero.note::*test][test:1]]
 #[tokio::test]
